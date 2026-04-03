@@ -1,0 +1,31 @@
+// raddbg 0.9.24 project file
+
+recent_file: path: "cb.h"
+recent_file: path: "cb.c"
+recent_file: path: "cbuild.c"
+target:
+{
+  executable: "cb.exe"
+  working_directory: ""
+  enabled: 1
+}
+debug_info:
+{
+  path: "C:/programming/cbuild/cbuild.pdb"
+  timestamp: 66210891850883
+}
+breakpoint:
+{
+  source_location: "cbuild.c:87:1"
+  hit_count: 0
+}
+debug_info:
+{
+  path: "C:/programming/cbuild/cb.pdb"
+  timestamp: 66211056351634
+}
+breakpoint:
+{
+  source_location: "cb.c:8:1"
+  hit_count: 1
+}
