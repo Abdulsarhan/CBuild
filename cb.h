@@ -38,7 +38,7 @@ void cb_append(command *cmd, string str_to_append);
 int cb_needs_rebuild(const char *binary_path, const char **source_paths, size_t source_paths_count);
 void cb_rebuild_yourself(int argc, char **argv);
 int cb_run(command *cmd);
-int cb_run_async(command *cmd);
+void cb_run_async(command *cmd);
 void cb_reset(command *cmd);
 #ifdef __cplusplus
 }
@@ -269,5 +269,3 @@ int cb_needs_rebuild(const char *output_path, const char **input_paths, size_t i
 }
 #endif /* POSIX */
 #endif /* IMPLEMENTATION */
-
-
