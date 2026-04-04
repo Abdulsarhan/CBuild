@@ -27,5 +27,5 @@ debug_info:
 breakpoint:
 {
   source_location: "cb.c:8:1"
-  hit_count: 1
+  hit_count: 0
 }

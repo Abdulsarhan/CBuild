@@ -2,7 +2,8 @@
 #define CB_H
 
 #define STR_LIT(x)(string){.value = x, .len = sizeof(x) - 1}
-#define CB_REBUILD_YOURSELF() cb_rebuild_yourself(argc, argv);
+
+#define cb_rebuild_yourself(argc, argv) cb_rebuild_yourself_impl((argc), (argv), __FILE__)
 
 #ifndef cb_cc
 #  if _WIN32
@@ -36,9 +37,9 @@ extern "C" {
 #endif
 void cb_append(command *cmd, string str_to_append);
 int cb_needs_rebuild(const char *binary_path, const char **source_paths, size_t source_paths_count);
-void cb_rebuild_yourself(int argc, char **argv);
 int cb_run(command *cmd);
 void cb_run_async(command *cmd);
+void cb_await_all();
 void cb_reset(command *cmd);
 #ifdef __cplusplus
 }
@@ -98,19 +99,8 @@ int cb_run(command *cmd) {
     STARTUPINFOA si = { sizeof(si) };
     PROCESS_INFORMATION pi;
 
-    printf("[INFO]: %s\n", cmd->value);
-    if (!CreateProcessA(
-            NULL,
-            cmd->value,
-            NULL,
-            NULL,
-            FALSE,
-            0,
-            NULL,
-            NULL,
-            &si,
-            &pi
-    )) {
+    printf("[INFO] %s\n", cmd->value);
+    if (!CreateProcessA( NULL, cmd->value, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
         printf("[ERROR] CreateProcess failed: %lu\n", GetLastError());
         return 0;
     }
@@ -123,6 +113,7 @@ int cb_run(command *cmd) {
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
 
+    cb_reset(cmd);
     return exit_code == 0;
 }
 
@@ -130,24 +121,14 @@ void cb_run_async(command *cmd) {
     STARTUPINFOA si = { sizeof(si) };
     PROCESS_INFORMATION pi;
 
-    printf("[INFO]: %s\n", cmd->value);
-    if (!CreateProcessA(
-            NULL,    // application name (NULL = use command line)
-            cmd->value,
-            NULL,    // process security attributes
-            NULL,    // thread security attributes
-            FALSE,   // inherit handles
-            0,       // creation flags
-            NULL,    // environment (NULL = inherit parent's)
-            NULL,    // current directory (NULL = inherit parent's)
-            &si,     // STARTUPINFO
-            &pi      // PROCESS_INFORMATION
-    )) {
+    printf("[INFO] %s\n", cmd->value);
+    if (!CreateProcessA(NULL, cmd->value, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
     }
 
     cb_ctx.procs[cb_ctx.procs_count].process_handle = pi.hProcess;
     cb_ctx.procs[cb_ctx.procs_count].thread_handle = pi.hThread;
     cb_ctx.procs_count++;
+    cb_reset(cmd);
 }
 
 void cb_await_all() {
@@ -166,9 +147,8 @@ void cb_reset(command *cmd) {
     cmd->len = prefix.len;
 }
 
-void cb_rebuild_yourself(int argc, char **argv) {
+void cb_rebuild_yourself_impl(int argc, char **argv, const char *source_path) {
     const char *binary_path = argv[0];
-    const char *source_path = __FILE__;
 
     const char *inputs[] = {source_path};
     if (cb_needs_rebuild(binary_path, inputs, 1) <= 0) return;
@@ -182,10 +162,11 @@ void cb_rebuild_yourself(int argc, char **argv) {
     }
 
     command cmd = {0};
-    cb_append(&cmd, STR_LIT("clang -g -o"));
-    cb_append(&cmd, (string){.value = (char *)binary_path, .len = strlen(binary_path)});
+    cb_cc(&cmd);
+    cb_append(&cmd, STR_LIT("-g"));
     cb_append(&cmd, (string){.value = (char *)source_path, .len = strlen(source_path)});
-    cb_append(&cmd, STR_LIT("-lkernel32 -luser32 -lshell32"));
+    cb_append(&cmd, STR_LIT("-lkernel32 -luser32 -lshell32 -o"));
+    cb_append(&cmd, (string){.value = (char *)binary_path, .len = strlen(binary_path)});
 
     if (!cb_run(&cmd)) {
         MoveFileExA(old_binary_path, binary_path, MOVEFILE_REPLACE_EXISTING);
